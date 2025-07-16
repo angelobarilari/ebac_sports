@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { GlobalStyle } from './styles'
 import Header from './components/Header'
 import Produtos from './containers/Produtos'
 
-import { GlobalStyle } from './styles'
+import { useGetProdutosQuery } from './store/api'
+import { useSelector, useDispatch } from 'react-redux'
+import { RootState, AppDispatch } from './store'
+import { adicionar } from './store/cartSlice'
+import { toggleFavorito } from './store/favoritosSlice'
 
 export type Produto = {
   id: number
@@ -12,32 +16,25 @@ export type Produto = {
 }
 
 function App() {
-  const [produtos, setProdutos] = useState<Produto[]>([])
-  const [carrinho, setCarrinho] = useState<Produto[]>([])
-  const [favoritos, setFavoritos] = useState<Produto[]>([])
+  const { data: produtos = [], isLoading, error } = useGetProdutosQuery()
 
-  useEffect(() => {
-    fetch('https://fake-api-tau.vercel.app/api/ebac_sports')
-      .then((res) => res.json())
-      .then((res) => setProdutos(res))
-  }, [])
+  const carrinho = useSelector((state: RootState) => state.cart.itens)
+  const favoritos = useSelector((state: RootState) => state.favoritos.itens)
 
-  function adicionarAoCarrinho(produto: Produto) {
-    if (carrinho.find((p) => p.id === produto.id)) {
-      alert('Item já adicionado')
-    } else {
-      setCarrinho([...carrinho, produto])
-    }
+  const dispatch = useDispatch<AppDispatch>()
+
+  function adicionarAoCarrinho(produto: (typeof produtos)[0]) {
+    const existe = carrinho.find((p) => p.id === produto.id)
+    if (existe) alert('Item já adicionado')
+    else dispatch(adicionar(produto))
   }
 
-  function favoritar(produto: Produto) {
-    if (favoritos.find((p) => p.id === produto.id)) {
-      const favoritosSemProduto = favoritos.filter((p) => p.id !== produto.id)
-      setFavoritos(favoritosSemProduto)
-    } else {
-      setFavoritos([...favoritos, produto])
-    }
+  function favoritar(produto: (typeof produtos)[0]) {
+    dispatch(toggleFavorito(produto))
   }
+
+  if (isLoading) return <p>Carregando...</p>
+  if (error) return <p>Erro ao carregar produtos</p>
 
   return (
     <>
